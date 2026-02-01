@@ -1,4 +1,4 @@
-# ![Claw Composer Icon](claw-composer.png) Claw Conductor v2.1
+# ![Claw Composer Icon](claw-composer-small.png) Claw Conductor v2.1
 
 **Build Complete Projects with a Single Request**
 
