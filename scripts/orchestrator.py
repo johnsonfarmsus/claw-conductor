@@ -246,10 +246,13 @@ def main():
     - Unit tests
     """
 
+    # Get GitHub user from config
+    github_user = orchestrator.config.get('github_user')
+
     result = orchestrator.execute_request(
         request=request,
         project_name='calculator-app',
-        github_user='jfasteroid'
+        github_user=github_user
     )
 
     if result['success']:

@@ -93,10 +93,10 @@ Discord Completion Report
 
 ```python
 {
-    "project_id": "dispatch-suite-20260201",
-    "name": "dispatch-suite",
-    "workspace": "/root/projects/dispatch-suite",
-    "github_repo": "jfasteroid/dispatch-suite",
+    "project_id": "my-project-20260201",
+    "name": "my-project",
+    "workspace": "/root/projects/my-project",
+    "github_repo": "{user}/my-project",
     "status": "in_progress",  # pending, in_progress, completed, failed
     "created_at": "2026-02-01T03:00:00Z",
     "tasks": [...],  # List of Task objects
@@ -141,7 +141,7 @@ Discord Completion Report
     "worker_id": "worker-1",
     "status": "busy",  # idle, busy
     "current_task": "task-001",
-    "current_project": "dispatch-suite",
+    "current_project": "my-project",
     "started_at": "2026-02-01T03:05:00Z"
 }
 ```
@@ -346,7 +346,7 @@ def consolidate_results(project):
 
 **Message Format:**
 ```
-🚀 Project Started: dispatch-suite
+🚀 Project Started: my-project
 📋 Decomposed into 7 tasks
 ⚡ Executing in parallel (max 5 concurrent)
 
@@ -358,7 +358,7 @@ def consolidate_results(project):
 
 ✅ All tasks completed!
 📦 Committed and pushed to GitHub
-🔗 https://github.com/jfasteroid/dispatch-suite
+🔗 https://github.com/{user}/dispatch-suite
 ```
 
 ---

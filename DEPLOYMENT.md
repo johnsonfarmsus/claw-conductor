@@ -3,7 +3,6 @@
 **Status:** ✅ Deployed to Production
 **Version:** 2.0.0
 **Date:** 2026-01-31
-**VPS:** 89.167.17.203 (Hetzner CX33)
 
 ---
 
@@ -111,7 +110,7 @@ Projects are created in:
 - **Root:** `/root/projects/`
 - **Structure:** `/root/projects/{project-name}/`
 - **Git:** Initialized with main branch
-- **GitHub:** Private repos at `github.com/jfasteroid/{project-name}`
+- **GitHub:** Private repos at `github.com/{github-user}/{project-name}` (configured in setup)
 
 ---
 
@@ -130,7 +129,7 @@ Claw Conductor will:
 3. 📁 Create project at `/root/projects/todo-app/`
 4. ⚡ Execute 5 tasks in parallel
 5. 📦 Consolidate results, run tests, commit to git
-6. 🐙 Push to `github.com/jfasteroid/todo-app`
+6. 🐙 Push to GitHub repository
 
 ### Example Workflow
 
@@ -180,7 +179,7 @@ Result: 8 tasks, ~45 minutes, full application on GitHub
 - **GitHub:** [github.com/johnsonfarmsus/claw-conductor](https://github.com/johnsonfarmsus/claw-conductor)
 - **Release:** [v2.0.0](https://github.com/johnsonfarmsus/claw-conductor/releases/tag/v2.0.0)
 - **ClawHub:** [clawhub.ai/skills/claw-conductor](https://www.clawhub.ai/skills/claw-conductor)
-- **VPS:** `root@89.167.17.203:~/.openclaw/skills/claw-conductor/`
+- **VPS:** `~/.openclaw/skills/claw-conductor/`
 
 ---
 

@@ -2,6 +2,7 @@
   "version": "1.0.0",
   "last_updated": null,
   "user_config": {
+    "github_user": "YOUR_GITHUB_USERNAME",
     "cost_tracking_enabled": true,
     "prefer_free_when_equal": true,
     "max_parallel_tasks": 5,

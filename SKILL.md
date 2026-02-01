@@ -28,19 +28,23 @@ When this skill is invoked with a development request, execute the following:
    orchestrator = Orchestrator()
 
    request = '''[USER'S REQUEST HERE]'''
-   project_name = '[PROJECT-NAME]'  # e.g., 'calculator-app', 'dispatch-system'
+   project_name = '[PROJECT-NAME]'  # e.g., 'calculator-app', 'todo-app', 'blog-site'
+
+   # Get GitHub user from config
+   github_user = orchestrator.config.get('github_user')
 
    result = orchestrator.execute_request(
        request=request,
        project_name=project_name,
-       github_user='jfasteroid'  # Use configured GitHub user
+       github_user=github_user
    )
 
    # Report results back to Discord
    if result['success']:
        print(f\"✅ Project '{project_name}' completed successfully!\")
        print(f\"📦 {result['tasks_completed']} tasks completed\")
-       print(f\"🔗 GitHub: https://github.com/jfasteroid/{project_name}\")
+       if github_user:
+           print(f\"🔗 GitHub: https://github.com/{github_user}/{project_name}\")
        print(f\"📁 Workspace: {result.get('workspace', '/root/projects/' + project_name)}\")
    else:
        print(f\"❌ Project failed: {result.get('error', 'Unknown error')}\")
@@ -209,7 +213,7 @@ Worker 1: Task 8 (Tests) → Llama
 ```
 ✅ All 8 tasks completed in 47 minutes
 📦 Committed to git with 8 changes
-🔗 Pushed to github.com/jfasteroid/dispatch-system
+🔗 Pushed to GitHub repository
 🎉 Project ready for deployment
 ```
 

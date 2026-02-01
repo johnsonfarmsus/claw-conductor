@@ -74,7 +74,7 @@ Discord Request: "Build a calculator app"
 3. Project Initialization
    ├─ Creates /root/projects/calculator-app/
    ├─ Initializes git repository
-   ├─ Creates GitHub repo: jfasteroid/calculator-app
+   ├─ Creates GitHub repo: {user}/calculator-app
    └─ Registers OpenClaw agent
     ↓
 4. Parallel Execution (max 5 concurrent)
@@ -86,7 +86,7 @@ Discord Request: "Build a calculator app"
    ├─ Merges all code changes
    ├─ Runs npm test (passes)
    ├─ Commits: "feat: calculator-app - 3 tasks completed"
-   └─ Pushes to github.com/jfasteroid/calculator-app
+   └─ Pushes to github.com/{user}/calculator-app
     ↓
 ✅ Complete project delivered in ~8 minutes
 ```
@@ -269,7 +269,7 @@ Worker 1: Tests (Llama) → Running
 1. Check git status for conflicts → None
 2. Run tests: npm test → ✅ Passed
 3. Commit: "feat: user-registration - 5 tasks completed"
-4. Push to github.com/jfasteroid/user-registration
+4. Push to github.com/{user}/user-registration
 5. Report to Discord: "✅ Project completed!"
 ```
 
