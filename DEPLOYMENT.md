@@ -81,8 +81,8 @@
 
 Claw Conductor is registered as an OpenClaw skill with:
 - **Name:** `claw-conductor`
-- **Version:** `2.0.0`
-- **Type:** Full autonomous orchestrator
+- **Version:** `2.1.0`
+- **Type:** Full autonomous orchestrator with AI-powered decomposition
 - **Invocation:** `@OpenClaw use claw-conductor to [request]`
 
 ### Model Configuration
@@ -155,7 +155,7 @@ Result: 8 tasks, ~45 minutes, full application on GitHub
 ## 📊 Current Status
 
 ### Production Ready ✅
-- Task decomposition engine
+- AI-powered task decomposition (v2.1)
 - Intelligent routing
 - Model capability scoring
 - Dependency tracking
