@@ -72,30 +72,9 @@ Tasks are rated 1-5 for complexity:
 
 ### 3. Scoring Algorithm
 
-For each task, models are scored 0-100:
+Models are scored 0-100: `Rating (50pts) + Complexity (40pts) + Experience (10pts) + Cost (10pts)`
 
-```
-Score = Rating (50pts) + Complexity Match (40pts) + Experience (10pts) + Cost Bonus (10pts)
-
-Example:
-- Rating: 5★ = 50pts
-- Complexity: Task=4, Max=5, Gap=1 → 35pts (slightly overqualified)
-- Experience: 7 tasks completed → 7pts
-- Cost: Free tier → 10pts
-Total: 102pts → capped at 100pts
-```
-
-### 4. Hard Ceiling Enforcement
-
-If a task's complexity exceeds a model's `max_complexity`, that model is **disqualified**:
-
-```
-Task: complexity=4 (complex authentication system)
-
-✓ Claude Sonnet: max_complexity=5 → QUALIFIED
-✓ GPT-4 Turbo: max_complexity=5 → QUALIFIED
-✗ Gemini Flash: max_complexity=3 → DISQUALIFIED
-```
+Tasks exceeding a model's `max_complexity` are **disqualified** (hard ceiling enforcement).
 
 ## 🛠️ Installation
 
@@ -248,90 +227,25 @@ See [`config/defaults/`](config/defaults/) for all profiles.
 
 ## 🔧 Configuration
 
-### Agent Registry Structure
+All configuration is in `config/agent-registry.json` (created by setup wizard).
 
-```json
-{
-  "version": "1.0.0",
-  "user_config": {
-    "cost_tracking_enabled": true,
-    "prefer_free_when_equal": true,
-    "default_complexity_threshold": 3
-  },
-  "agents": {
-    "claude-sonnet-4.5": {
-      "model_id": "anthropic/claude-sonnet-4.5",
-      "provider": "anthropic",
-      "enabled": true,
-      "user_cost": {
-        "type": "pay-per-use",
-        "input_cost_per_million": 3.00,
-        "output_cost_per_million": 15.00,
-        "verified_date": "2026-01-31"
-      },
-      "capabilities": {
-        "bug-detection-fixes": {
-          "rating": 5,
-          "max_complexity": 5,
-          "experience_count": 12,
-          "notes": "Exceptional at finding edge cases"
-        }
-      }
-    }
-  }
-}
-```
+Key settings:
+- **cost_tracking_enabled** - Factor cost into routing
+- **prefer_free_when_equal** - Tiebreaker for free models
+- **fallback** - Automatic retry configuration
 
-### User Preferences
-
-- **`cost_tracking_enabled`** - Include cost in routing decisions
-- **`prefer_free_when_equal`** - Tiebreaker favors free models
-- **`default_complexity_threshold`** - Default max complexity for new capabilities
+See [`config/agent-registry.example.json`](config/agent-registry.example.json) for the full schema.
 
 ## 🎓 Examples
 
-### Example 1: Simple Bug Fix
-
-```
-Task: "Fix the timezone display bug in the dashboard"
-
-Analysis:
-- Category: bug-detection-fixes
-- Complexity: 2 (simple)
-
-Routing:
-→ Gemini 2.0 Flash (3★ bugs, max=3, FREE)
-  Why? Qualifies for complexity, free tier saves money
+Run the included examples:
+```bash
+python3 examples/simple-bug-fix.py       # Simple routing
+python3 examples/complex-feature.py      # Multi-subtask routing
+python3 examples/fallback-routing.py     # Fallback scenarios
 ```
 
-### Example 2: Complex Feature
-
-```
-Task: "Add real-time collaboration with WebSockets"
-
-Analysis:
-- Category: backend-development
-- Complexity: 5 (very complex)
-
-Routing:
-→ Claude Sonnet 4.5 (5★ backend, max=5)
-  Why? Only model rated for complexity=5 backend work
-```
-
-### Example 3: Multi-Subtask Request
-
-```
-Request: "Create a RESTful API for blog posts with tests"
-
-Decomposition:
-1. Database schema (complexity=3) → Mistral (5★ DB, free)
-2. CRUD endpoints (complexity=3) → GPT-4 (4★ API)
-3. Input validation (complexity=2) → Gemini (4★ API, free)
-4. Unit tests (complexity=3) → Llama (5★ tests, free)
-5. Integration tests (complexity=4) → Claude (5★ tests)
-
-Result: 5 subtasks routed to 5 models optimally
-```
+See [`examples/README.md`](examples/README.md) for detailed walkthroughs.
 
 ## 🤝 Contributing
 
@@ -346,7 +260,9 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
-MIT License - see [`LICENSE`](LICENSE) for details.
+GNU AGPL v3 - see [`LICENSE`](LICENSE) for details.
+
+This copyleft license requires anyone running a modified version on a server to make the source code available to users.
 
 ## 🙏 Acknowledgments
 
