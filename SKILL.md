@@ -10,6 +10,60 @@ version: 2.0.0
 
 Claw Conductor is a full autonomous development orchestrator that transforms complex requests into working software through intelligent multi-model coordination.
 
+## 🚀 Skill Invocation (For OpenClaw Agent)
+
+When this skill is invoked with a development request, execute the following:
+
+1. **Extract the request** from the user's message (everything after "use claw-conductor to")
+
+2. **Determine project name** from the request or generate one from keywords
+
+3. **Execute the orchestrator** using Python:
+   ```bash
+   cd ~/.openclaw/skills/claw-conductor/scripts
+   python3 -c "
+   from orchestrator import Orchestrator
+   import sys
+
+   orchestrator = Orchestrator()
+
+   request = '''[USER'S REQUEST HERE]'''
+   project_name = '[PROJECT-NAME]'  # e.g., 'calculator-app', 'dispatch-system'
+
+   result = orchestrator.execute_request(
+       request=request,
+       project_name=project_name,
+       github_user='jfasteroid'  # Use configured GitHub user
+   )
+
+   # Report results back to Discord
+   if result['success']:
+       print(f\"✅ Project '{project_name}' completed successfully!\")
+       print(f\"📦 {result['tasks_completed']} tasks completed\")
+       print(f\"🔗 GitHub: https://github.com/jfasteroid/{project_name}\")
+       print(f\"📁 Workspace: {result.get('workspace', '/root/projects/' + project_name)}\")
+   else:
+       print(f\"❌ Project failed: {result.get('error', 'Unknown error')}\")
+       sys.exit(1)
+   "
+   ```
+
+4. **Report progress** to Discord during execution:
+   - Announce task decomposition results
+   - Report task routing decisions
+   - Update on parallel execution progress
+   - Share final results with GitHub link
+
+**Example Invocation:**
+User says: `@OpenClaw use claw-conductor to build a calculator app`
+
+You execute:
+- Request: "build a calculator app"
+- Project name: "calculator-app"
+- Run orchestrator with these parameters
+
+---
+
 ## What's New in v2.0
 
 🎯 **Full Orchestration**: Decomposes complex requests → Routes subtasks → Executes in parallel → Consolidates results
