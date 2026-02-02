@@ -47,44 +47,51 @@ Manually coordinating these models is tedious and error-prone.
 
 ## ✨ What's New in v2.1
 
-🤖 **AI-Powered Decomposition**: Uses your best AI model to intelligently break down complex requests (auto-selects or manual override)
-🎯 **Full Orchestration**: Decomposes → Routes → Executes → Consolidates
-⚡ **Parallel Execution**: Up to 5 concurrent tasks across multiple projects
-📁 **Project Management**: Auto-creates workspace, git repo, GitHub repo
-🔗 **Dependency-Aware**: Respects task dependencies (database before auth)
-📦 **Auto-Consolidation**: Merges results, tests, commits, pushes to GitHub
-🎨 **Multi-Project**: Handle multiple concurrent requests simultaneously
+🤖 **Always-On Triage**: Automatically classifies requests as simple questions vs development tasks
+💬 **Discord Integration**: Auto-maps Discord channels to project workspaces in `/root/projects`
+⚡ **Dual-Mode Response**: Fast answers for questions, full orchestration for development
+🎯 **Smart Routing**: Simple mode uses fast models, development mode uses full pipeline
+🔧 **User Overrides**: Force classification with `!simple` or `!dev` flags
+📋 **Path Announcements**: Visual indicators (📋 Simple / 🔧 Development) show routing decisions
+🌍 **Project-Aware**: All responses know their workspace, channel, and context
+🎨 **Multi-Project**: Handle multiple concurrent requests across different Discord channels
 
 ---
 
 ## 📋 Complete Workflow
 
 ```
-Discord Request: "Build a calculator app"
+Discord Message in #calculator-app channel
     ↓
-1. AI-Powered Task Decomposition
+1. Context Detection & Triage
+   ├─ Discord Integration: Maps #calculator-app → /root/projects/calculator-app
+   ├─ Request Classification: "Build a calculator app" → DEVELOPMENT
+   ├─ Path Announcement: 🔧 Development mode - full orchestration
+   └─ Route to: Full decomposition pipeline
+    ↓
+2. AI-Powered Task Decomposition (Development Mode)
    ├─ Uses best-rated model (auto-selected or configured)
    ├─ Task 1: Calculator logic (backend-development, complexity: 2)
    ├─ Task 2: UI components (frontend-development, complexity: 2)
    └─ Task 3: Unit tests (unit-test-generation, complexity: 2)
     ↓
-2. Intelligent Routing
+3. Intelligent Routing
    ├─ Task 1 → Llama 3.3 70B (score: 87/100)
    ├─ Task 2 → Mistral Devstral (score: 95/100)
    └─ Task 3 → Llama 3.3 70B (score: 95/100)
     ↓
-3. Project Initialization
-   ├─ Creates /root/projects/calculator-app/
+4. Project Initialization
+   ├─ Workspace: /root/projects/calculator-app/ (from Discord mapping)
    ├─ Initializes git repository
    ├─ Creates GitHub repo: {user}/calculator-app
    └─ Registers OpenClaw agent
     ↓
-4. Parallel Execution (max 5 concurrent)
+5. Parallel Execution (max 5 concurrent)
    ├─ Worker 1: Task 1 (Llama) → Running
    ├─ Worker 2: Task 2 (Devstral) → Running
    └─ Worker 3: Task 3 (Llama) → Running
     ↓
-5. Result Consolidation
+6. Result Consolidation
    ├─ Merges all code changes
    ├─ Runs npm test (passes)
    ├─ Commits: "feat: calculator-app - 3 tasks completed"
@@ -96,6 +103,50 @@ Discord Request: "Build a calculator app"
 ---
 
 ## 🎯 Key Features
+
+### Always-On Triage & Discord Integration
+
+**The Problem:** Not every Discord message needs full orchestration. Questions like "What's the status?" shouldn't trigger decomposition.
+
+**The Solution:** Claw Conductor acts as an **always-on layer** that intelligently routes requests:
+
+#### Triage Classification
+- **Simple Mode** (📋): Questions, status checks, explanations → Fast model response
+- **Development Mode** (🔧): Build, fix, implement requests → Full orchestration pipeline
+
+#### Discord Channel Mapping
+```
+Discord #scientific-calculator → /root/projects/scientific-calculator
+Discord #dispatch-suite → /root/projects/dispatch-suite
+Discord #satire-news → /root/projects/satire-news
+```
+
+Each Discord channel in "Active Projects" category automatically maps to its project workspace.
+
+#### User Overrides
+```
+@OpenClaw !simple Build a calculator  → Forces simple mode (just answers)
+@OpenClaw !dev What is this project?  → Forces development mode (probably errors)
+```
+
+#### Example Flows
+
+**Simple Request:**
+```
+User: "What files are in this project?"
+  → 📋 Simple response mode
+  → Fast answer from Mistral Devstral (project-aware)
+  → Response in ~2 seconds
+```
+
+**Development Request:**
+```
+User: "Add user authentication with email verification"
+  → 🔧 Development mode - full orchestration
+  → Decompose into 5 tasks
+  → Execute in parallel
+  → Complete project in ~15 minutes
+```
 
 ### AI-Powered Task Decomposition
 
