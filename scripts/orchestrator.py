@@ -3,11 +3,13 @@
 Claw Conductor Orchestrator - Main Controller
 
 Coordinates the full autonomous development workflow:
-1. Task decomposition
-2. Dependency analysis
-3. Parallel execution
-4. Result consolidation
-5. Discord reporting
+1. Request triage (simple vs development)
+2. Discord channel detection & workspace mapping
+3. Task decomposition
+4. Dependency analysis
+5. Parallel execution
+6. Result consolidation
+7. Discord reporting
 """
 
 import json
@@ -25,27 +27,37 @@ from decomposer import Decomposer
 from project_manager import ProjectManager
 from worker_pool import WorkerPool
 from consolidator import Consolidator
+from discord_integration import DiscordIntegration
 
 
 class Orchestrator:
     """Main orchestration controller for Claw Conductor"""
 
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str = None, conductor_config_path: str = None):
         """
         Initialize orchestrator with configuration
 
         Args:
             config_path: Path to agent-registry.json
+            conductor_config_path: Path to conductor-config.json
         """
         if config_path is None:
             config_path = str(Path(__file__).parent.parent / 'config' / 'agent-registry.json')
+        if conductor_config_path is None:
+            conductor_config_path = str(Path(__file__).parent.parent / 'config' / 'conductor-config.json')
 
+        # Load conductor configuration
+        with open(conductor_config_path, 'r') as f:
+            self.conductor_config = json.load(f)
+
+        # Initialize components
         self.router = Router(config_path)
         self.decomposer = Decomposer(config_path)
         self.project_manager = ProjectManager()
         self.consolidator = Consolidator()
+        self.discord = DiscordIntegration(conductor_config_path)
 
-        # Load user config
+        # Load user config from agent registry
         with open(config_path, 'r') as f:
             registry = json.load(f)
         self.config = registry.get('user_config', {})
@@ -54,8 +66,203 @@ class Orchestrator:
         max_workers = self.config.get('max_parallel_tasks', 5)
         self.worker_pool = WorkerPool(max_workers, self.router)
 
+        # Triage configuration
+        self.triage_config = self.conductor_config.get('triage', {})
+        self.triage_enabled = self.triage_config.get('enabled', True)
+        self.announce_path = self.triage_config.get('announce_path', True)
+
+        # User override triggers
+        overrides = self.triage_config.get('user_overrides', {})
+        self.simple_trigger = overrides.get('simple_trigger', '!simple')
+        self.dev_trigger = overrides.get('dev_trigger', '!dev')
+
         # Active projects
         self.projects: Dict[str, dict] = {}
+
+    def triage_request(self, request: str) -> str:
+        """
+        Triage incoming request to determine if it's simple or development
+
+        Args:
+            request: User's message/request
+
+        Returns:
+            'simple' or 'development'
+        """
+        # Check for user overrides first
+        if self.simple_trigger in request:
+            return 'simple'
+        if self.dev_trigger in request:
+            return 'development'
+
+        # Use fast model for classification
+        triage_model = self.triage_config.get('model', 'chutes/openai/gpt-oss-120b-TEE')
+        bias = self.triage_config.get('bias', 'development')
+
+        # Classification prompt
+        prompt = f"""Classify this message as SIMPLE or DEVELOPMENT:
+
+SIMPLE examples:
+- Greetings, small talk, questions about the project
+- "What files exist in this project?"
+- "How does the authentication work?"
+- "What's the current status?"
+- Discussions, clarifications, explanations
+
+DEVELOPMENT examples:
+- Requests to build, create, implement, fix, refactor, add features
+- "Build a calculator app"
+- "Fix the bug in authentication"
+- "Add a new endpoint for user registration"
+- "Refactor the database layer"
+- Code generation, testing, deployment tasks
+
+Bias: Lean towards {bias.upper()} when uncertain.
+
+Message: "{request}"
+
+Respond with exactly one word: SIMPLE or DEVELOPMENT"""
+
+        # TODO: Actually call the model
+        # For now, use simple heuristics
+        request_lower = request.lower()
+
+        # Development keywords
+        dev_keywords = [
+            'build', 'create', 'implement', 'add', 'fix', 'refactor',
+            'deploy', 'test', 'write', 'develop', 'code', 'feature',
+            'bug', 'update', 'modify', 'change', 'improve', 'optimize'
+        ]
+
+        # Simple keywords
+        simple_keywords = [
+            'what', 'why', 'how', 'explain', 'show', 'list', 'status',
+            'help', 'hello', 'hi', 'thanks', 'thank you', 'ok', 'okay'
+        ]
+
+        # Score the request
+        dev_score = sum(1 for kw in dev_keywords if kw in request_lower)
+        simple_score = sum(1 for kw in simple_keywords if kw in request_lower)
+
+        # Apply bias
+        if bias == 'development':
+            dev_score += 1
+
+        # Make decision
+        if dev_score > simple_score:
+            return 'development'
+        elif simple_score > dev_score:
+            return 'simple'
+        else:
+            # Tie - use bias
+            return bias
+
+    def handle_simple_response(self, request: str, context: Dict) -> Dict:
+        """
+        Handle simple (non-development) requests
+
+        Args:
+            request: User's question/message
+            context: Execution context (workspace, project info)
+
+        Returns:
+            Response dictionary
+        """
+        # Get simple response configuration
+        simple_config = self.conductor_config.get('simple_response', {})
+        model = simple_config.get('model', 'mistral/devstral-2512')
+        max_tokens = simple_config.get('max_tokens', 2000)
+        project_aware = simple_config.get('project_aware', True)
+
+        # Build context-aware prompt
+        if project_aware and context.get('project'):
+            project_context = f"""You are working in project: {context['project']}
+Workspace: {context['workspace']}
+Source: {context['source']}
+
+"""
+        else:
+            project_context = ""
+
+        prompt = f"""{project_context}User message: {request}
+
+Respond naturally and helpfully."""
+
+        # TODO: Actually call the model
+        # For now, return a placeholder
+        response = f"[Simple response mode - project: {context.get('project', 'none')}]\n"
+        response += f"I understand you're asking: {request[:100]}...\n"
+        response += f"This would be answered by model: {model}"
+
+        return {
+            'success': True,
+            'mode': 'simple',
+            'response': response,
+            'model': model,
+            'project': context.get('project'),
+            'workspace': str(context.get('workspace', ''))
+        }
+
+    def handle_message(self, request: str, channel_id: str = None,
+                      channel_name: str = None, project_name: str = None,
+                      workspace: str = None, github_user: str = None) -> dict:
+        """
+        Main entry point - handles any message with triage and routing
+
+        Args:
+            request: User's message/request
+            channel_id: Discord channel ID (if from Discord)
+            channel_name: Discord channel name (if from Discord)
+            project_name: Project name (fallback if not Discord)
+            workspace: Workspace path (fallback)
+            github_user: GitHub username
+
+        Returns:
+            Response dictionary
+        """
+        # Phase 1: Detect context (Discord vs direct)
+        context = self.discord.detect_context(channel_id, channel_name, project_name)
+
+        # Check for errors in context
+        if 'error' in context:
+            return {
+                'success': False,
+                'error': context['error'],
+                'context': context
+            }
+
+        # Use workspace from context if not explicitly provided
+        if workspace is None and context.get('workspace'):
+            workspace = str(context['workspace'])
+
+        # Use project name from context if not explicitly provided
+        if project_name is None and context.get('project'):
+            project_name = context['project']
+
+        # Phase 2: Triage request (simple vs development)
+        if self.triage_enabled:
+            classification = self.triage_request(request)
+        else:
+            # If triage disabled, assume development
+            classification = 'development'
+
+        # Announce path if configured
+        if self.announce_path:
+            if classification == 'simple':
+                print("📋 Simple response mode")
+            else:
+                print("🔧 Development mode - full orchestration")
+
+        # Phase 3: Route to appropriate handler
+        if classification == 'simple':
+            return self.handle_simple_response(request, context)
+        else:
+            return self.execute_request(
+                request=request,
+                project_name=project_name,
+                workspace=workspace,
+                github_user=github_user
+            )
 
     def execute_request(self, request: str, project_name: str = None,
                        workspace: str = None, github_user: str = None) -> dict:
@@ -143,11 +350,13 @@ class Orchestrator:
         # Return result
         return {
             'success': project['status'] == 'completed',
+            'mode': 'development',
             'project': project,
             'github_repo': project.get('github_repo'),
             'tasks_completed': len([t for t in tasks if t['status'] == 'completed']),
             'tasks_failed': len([t for t in tasks if t['status'] == 'failed']),
-            'execution_time': self._calculate_total_time(project)
+            'execution_time': self._calculate_total_time(project),
+            'workspace': project.get('workspace')
         }
 
     def _initialize_project(self, request: str, project_name: Optional[str],
@@ -234,11 +443,23 @@ class Orchestrator:
 
 
 def main():
-    """Example usage"""
+    """Example usage demonstrating triage and routing"""
+    print("=== Claw Conductor v2.1 - Triage & Discord Integration ===\n")
+
     orchestrator = Orchestrator()
 
-    # Example request
-    request = """
+    # Example 1: Simple question (should use simple response)
+    print("📝 Example 1: Simple question")
+    result1 = orchestrator.handle_message(
+        request="What files exist in this project?",
+        channel_name="scientific-calculator"
+    )
+    print(f"Mode: {result1.get('mode')}")
+    print(f"Response: {result1.get('response', result1.get('error'))}\n")
+
+    # Example 2: Development request (should use full orchestration)
+    print("📝 Example 2: Development request")
+    dev_request = """
     Build a simple calculator web application with:
     - Basic arithmetic operations (add, subtract, multiply, divide)
     - Clean, modern UI
@@ -246,24 +467,33 @@ def main():
     - Unit tests
     """
 
-    # Get GitHub user from config
-    github_user = orchestrator.config.get('github_user')
-
-    result = orchestrator.execute_request(
-        request=request,
+    result2 = orchestrator.handle_message(
+        request=dev_request,
         project_name='calculator-app',
-        github_user=github_user
+        github_user='jfasteroid'
     )
 
-    if result['success']:
+    if result2['success']:
         print(f"\n✅ Project completed successfully!")
-        print(f"   GitHub: {result['github_repo']}")
-        print(f"   Tasks: {result['tasks_completed']}/{result['tasks_completed'] + result['tasks_failed']}")
-        print(f"   Time: {result['execution_time']:.0f}s")
+        print(f"   Mode: {result2.get('mode')}")
+        print(f"   GitHub: {result2.get('github_repo')}")
+        print(f"   Tasks: {result2['tasks_completed']}/{result2['tasks_completed'] + result2['tasks_failed']}")
+        print(f"   Time: {result2.get('execution_time', 0):.0f}s")
     else:
-        print(f"\n❌ Project failed")
-        print(f"   Tasks completed: {result['tasks_completed']}")
-        print(f"   Tasks failed: {result['tasks_failed']}")
+        print(f"\n❌ Request failed")
+        print(f"   Mode: {result2.get('mode')}")
+        if 'tasks_completed' in result2:
+            print(f"   Tasks completed: {result2['tasks_completed']}")
+            print(f"   Tasks failed: {result2['tasks_failed']}")
+
+    # Example 3: User override (force simple mode with !simple)
+    print("\n📝 Example 3: User override (!simple)")
+    result3 = orchestrator.handle_message(
+        request="!simple Build a calculator",
+        channel_name="test-project"
+    )
+    print(f"Mode: {result3.get('mode')}")
+    print(f"Response: {result3.get('response', result3.get('error'))[:100]}...")
 
 
 if __name__ == '__main__':

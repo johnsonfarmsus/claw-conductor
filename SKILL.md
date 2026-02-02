@@ -1,16 +1,88 @@
 ---
 name: claw-conductor
-description: Full autonomous development orchestrator with AI-powered task decomposition. Decomposes complex requests into subtasks, routes to optimal AI models based on capability ratings, executes in parallel, and consolidates results into complete projects.
+description: Always-on autonomous development orchestrator with intelligent triage. Auto-detects Discord channels, routes to project workspaces, triages simple vs development requests, decomposes complex tasks, routes to optimal AI models, executes in parallel, and consolidates results.
 version: 2.1.0
 ---
 
 # Claw Conductor v2.1
 
-**Build complete projects with a single request.**
+**Your always-on development assistant - handles everything from quick questions to full project builds.**
 
-Claw Conductor is a full autonomous development orchestrator that transforms complex requests into working software through intelligent multi-model coordination.
+Claw Conductor is an intelligent orchestration layer that:
+
+- 🎯 **Always-On**: Handles every message automatically (no need to invoke)
+- 🤖 **Smart Triage**: Detects simple questions vs development tasks
+- 💬 **Discord-Aware**: Auto-maps channels to project workspaces
+- 🔀 **Multi-Model**: Routes tasks to optimal AI based on capabilities
+- ⚡ **Parallel Execution**: Builds complete projects efficiently
+
+## 🚀 How It Works
+
+**Automatic Flow:**
+1. Message arrives in Discord channel (e.g., #scientific-calculator)
+2. Claw-conductor detects channel → maps to `/root/projects/scientific-calculator`
+3. Triages request: Simple question or development task?
+4. **If Simple**: Quick response from fast model with project context
+5. **If Development**: Full orchestration - decompose, route, execute, consolidate
+
+**You never need to explicitly invoke it** - it handles everything automatically!
+
+## 🎯 Usage Examples
+
+**Simple Questions** (fast response):
+```
+User: What files are in this project?
+Conductor: 📋 Simple response mode
+          [Lists files from /root/projects/scientific-calculator]
+
+User: How does the calculator work?
+Conductor: 📋 Simple response mode
+          [Explains architecture with project context]
+```
+
+**Development Tasks** (full orchestration):
+```
+User: Build a scientific calculator with trig functions
+Conductor: 🔧 Development mode - full orchestration
+          [Decomposes into tasks, routes to models, executes in parallel]
+
+User: Fix the bug in the calculation logic
+Conductor: 🔧 Development mode - full orchestration
+          [Analyzes code, creates fix, tests, commits]
+```
+
+**User Overrides**:
+```
+User: !simple Build a calculator
+Conductor: 📋 Simple response mode
+          [Gives advice/explanation instead of building]
+
+User: !dev What files exist?
+Conductor: 🔧 Development mode - full orchestration
+          [Treats as development task - maybe creates file listing tool]
+```
 
 ## 🚀 Skill Invocation (For OpenClaw Agent)
+
+**NEW: Always-On Mode (Recommended)**
+
+Configure this skill as the default handler for Discord channels in "Active Projects" category:
+
+```python
+# In OpenClaw agent configuration
+from orchestrator import Orchestrator
+
+orchestrator = Orchestrator()
+
+# Handle ALL messages through conductor
+result = orchestrator.handle_message(
+    request=user_message,
+    channel_id=discord_channel_id,
+    channel_name=discord_channel_name
+)
+```
+
+**Legacy: Explicit Invocation**
 
 When this skill is invoked with a development request, execute the following:
 
