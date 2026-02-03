@@ -138,7 +138,7 @@ class WorkerPool:
 
     def _execute_task_with_model(self, task: Dict, project: Dict) -> Dict:
         """
-        Execute task by calling the assigned AI model via OpenClaw Gateway
+        Execute task by calling the assigned AI model via OpenClaw CLI
 
         Args:
             task: Task to execute
@@ -147,7 +147,8 @@ class WorkerPool:
         Returns:
             dict: Execution result
         """
-        import requests
+        import subprocess
+        import json
         import os
 
         # Get the model assignment
@@ -159,10 +160,6 @@ class WorkerPool:
                 'output': '',
                 'error': 'No model assigned to task'
             }
-
-        # Get the OpenClaw model ID from router's agent config
-        agent = self.router.agents.get(model_id, {})
-        openclaw_model_id = agent.get('openclaw_model_id', agent.get('model_id', model_id))
 
         # Build prompt for the AI model
         prompt = f"""You are working on project: {project['name']}
@@ -182,49 +179,66 @@ Complete this task following these requirements:
 
 Respond with a summary of what you implemented and any files you created/modified."""
 
-        # Gateway URL
-        gateway_url = os.getenv('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789')
-
         try:
-            # Call OpenClaw Gateway HTTP API
-            response = requests.post(
-                f"{gateway_url}/v1/chat/completions",
-                json={
-                    "model": openclaw_model_id,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.7,
-                    "max_tokens": 8192
-                },
-                headers={"Content-Type": "application/json"},
-                timeout=300  # 5 minutes timeout for task execution
+            # Use openclaw agent command (uses main agent with configured model)
+            result = subprocess.run(
+                ['openclaw', 'agent', '--agent', 'main', '--message', prompt, '--json'],
+                capture_output=True,
+                text=True,
+                timeout=300,  # 5 minutes timeout for task execution
+                cwd=os.path.expanduser('~')
             )
 
-            response.raise_for_status()
-            result = response.json()
+            if result.returncode != 0:
+                return {
+                    'success': False,
+                    'files_modified': [],
+                    'output': '',
+                    'error': f"OpenClaw agent command failed: {result.stderr}"
+                }
 
-            # Extract the response
-            ai_output = result['choices'][0]['message']['content']
+            # Parse JSON response
+            response_data = json.loads(result.stdout)
 
-            return {
-                'success': True,
-                'files_modified': task.get('file_targets', []),
-                'output': ai_output,
-                'error': None
-            }
+            # Extract text from response
+            if response_data.get('status') == 'ok':
+                payloads = response_data.get('result', {}).get('payloads', [])
+                if payloads and payloads[0].get('text'):
+                    ai_output = payloads[0]['text']
+                    return {
+                        'success': True,
+                        'files_modified': task.get('file_targets', []),
+                        'output': ai_output,
+                        'error': None
+                    }
 
-        except requests.exceptions.RequestException as e:
             return {
                 'success': False,
                 'files_modified': [],
                 'output': '',
-                'error': f"Gateway API call failed: {e}"
+                'error': f"No text in response: {result.stdout[:200]}"
             }
-        except (KeyError, IndexError) as e:
+
+        except json.JSONDecodeError as e:
             return {
                 'success': False,
                 'files_modified': [],
                 'output': '',
-                'error': f"Failed to parse Gateway response: {e}"
+                'error': f"Failed to parse OpenClaw response as JSON: {e}"
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'files_modified': [],
+                'output': '',
+                'error': "OpenClaw agent command timed out after 300s"
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'files_modified': [],
+                'output': '',
+                'error': f"Task execution failed: {e}"
             }
 
     def _simulate_task_execution(self, task: Dict, project: Dict) -> Dict:
