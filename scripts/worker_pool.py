@@ -136,32 +136,9 @@ class WorkerPool:
         # Complete task
         self._on_task_complete(worker, result)
 
-    def _simulate_task_execution(self, task: Dict, project: Dict) -> Dict:
+    def _execute_task_with_model(self, task: Dict, project: Dict) -> Dict:
         """
-        Simulate task execution for testing
-
-        TODO: Replace with actual OpenClaw Task tool call:
-        ```python
-        from openclaw import Task as OpenClawTask
-
-        result = OpenClawTask(
-            description=f"Execute: {task['description']}",
-            prompt=f'''
-            You are working on project: {project['name']}
-            Workspace: {project['workspace']}
-
-            Task: {task['description']}
-            Category: {task['category']}
-            Complexity: {task['complexity']}
-
-            Files to create/modify: {', '.join(task['file_targets'])}
-
-            Complete this task and commit your changes.
-            ''',
-            subagent_type="general-purpose",
-            model=task['assigned_model']
-        )
-        ```
+        Execute task by calling the assigned AI model via OpenClaw Gateway
 
         Args:
             task: Task to execute
@@ -170,6 +147,104 @@ class WorkerPool:
         Returns:
             dict: Execution result
         """
+        import requests
+        import os
+
+        # Get the model assignment
+        model_id = task.get('assigned_model')
+        if not model_id:
+            return {
+                'success': False,
+                'files_modified': [],
+                'output': '',
+                'error': 'No model assigned to task'
+            }
+
+        # Get the OpenClaw model ID from router's agent config
+        agent = self.router.agents.get(model_id, {})
+        openclaw_model_id = agent.get('openclaw_model_id', agent.get('model_id', model_id))
+
+        # Build prompt for the AI model
+        prompt = f"""You are working on project: {project['name']}
+Workspace: {project['workspace']}
+
+Task: {task['description']}
+Category: {task['category']}
+Complexity: {task['complexity']}/5
+
+Files to create/modify: {', '.join(task['file_targets'])}
+
+Complete this task following these requirements:
+1. Create or modify the specified files
+2. Write clean, well-documented code
+3. Follow best practices for {task['category']}
+4. Ensure code is production-ready
+
+Respond with a summary of what you implemented and any files you created/modified."""
+
+        # Gateway URL
+        gateway_url = os.getenv('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789')
+
+        try:
+            # Call OpenClaw Gateway HTTP API
+            response = requests.post(
+                f"{gateway_url}/v1/chat/completions",
+                json={
+                    "model": openclaw_model_id,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7,
+                    "max_tokens": 8192
+                },
+                headers={"Content-Type": "application/json"},
+                timeout=300  # 5 minutes timeout for task execution
+            )
+
+            response.raise_for_status()
+            result = response.json()
+
+            # Extract the response
+            ai_output = result['choices'][0]['message']['content']
+
+            return {
+                'success': True,
+                'files_modified': task.get('file_targets', []),
+                'output': ai_output,
+                'error': None
+            }
+
+        except requests.exceptions.RequestException as e:
+            return {
+                'success': False,
+                'files_modified': [],
+                'output': '',
+                'error': f"Gateway API call failed: {e}"
+            }
+        except (KeyError, IndexError) as e:
+            return {
+                'success': False,
+                'files_modified': [],
+                'output': '',
+                'error': f"Failed to parse Gateway response: {e}"
+            }
+
+    def _simulate_task_execution(self, task: Dict, project: Dict) -> Dict:
+        """
+        Simulate task execution for testing (fallback when not using real execution)
+
+        Args:
+            task: Task to execute
+            project: Project context
+
+        Returns:
+            dict: Execution result
+        """
+        # Check if we should use real execution
+        import os
+        use_real_execution = os.getenv('CLAW_CONDUCTOR_REAL_EXECUTION', 'false').lower() == 'true'
+
+        if use_real_execution:
+            return self._execute_task_with_model(task, project)
+
         # Simulate work (2-5 seconds per task)
         import random
         time.sleep(random.uniform(0.5, 2.0))  # Faster for testing
@@ -181,7 +256,7 @@ class WorkerPool:
             return {
                 'success': True,
                 'files_modified': task.get('file_targets', []),
-                'output': f"Task {task['task_id']} completed successfully",
+                'output': f"Task {task['task_id']} completed successfully (simulated)",
                 'error': None
             }
         else:

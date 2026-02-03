@@ -72,9 +72,11 @@
     "decomposition_model_info": "Set to null (auto-select best model) or specific model ID. Auto-selection picks the highest-rated model from your registry and falls back to second-best on failure.",
     "agent_schema": {
       "model_id": "provider/model-name",
+      "openclaw_model_id": "provider/full-model-id-from-openclaw",
       "provider": "mistral|openai|google|openrouter|perplexity",
       "context_window": 128000,
       "enabled": true,
+      "notes": "openclaw_model_id should match the exact model ID from OpenClaw's models.providers config (e.g., 'chutes/mistralai/Devstral-2-123B-Instruct-2512-TEE'). If not set, model_id will be used as fallback.",
       "user_cost": {
         "type": "free|free-tier|pay-per-use|subscription",
         "input_cost_per_million": 0,

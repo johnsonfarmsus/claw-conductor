@@ -307,10 +307,10 @@ RESPOND WITH ONLY THE JSON ARRAY, NO OTHER TEXT."""
 
     def _invoke_openclaw_task(self, model_id: str, prompt: str) -> str:
         """
-        Invoke OpenClaw Task to call an AI model
+        Invoke OpenClaw Gateway HTTP API to call an AI model
 
         Args:
-            model_id: Model to invoke
+            model_id: Claw-conductor model ID (e.g., 'mistral-devstral-2512')
             prompt: Prompt to send
 
         Returns:
@@ -318,37 +318,41 @@ RESPOND WITH ONLY THE JSON ARRAY, NO OTHER TEXT."""
 
         Raises:
             Exception: If invocation fails
-
-        NOTE: This method should be updated to use OpenClaw's actual Task API
         """
-        import subprocess
-        import tempfile
+        import requests
         import os
 
-        # Write prompt to temporary file to avoid shell escaping issues
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write(prompt)
-            prompt_file = f.name
+        # Get the actual OpenClaw model ID from agent config
+        agent = self.agents.get(model_id, {})
+        openclaw_model_id = agent.get('openclaw_model_id', agent.get('model_id', model_id))
+
+        # Gateway URL (default localhost:18789, can be overridden via env)
+        gateway_url = os.getenv('OPENCLAW_GATEWAY_URL', 'http://127.0.0.1:18789')
 
         try:
-            # Call OpenClaw CLI (adjust command based on actual OpenClaw interface)
-            # This is a placeholder - actual implementation depends on OpenClaw's API
-            result = subprocess.run(
-                ['openclaw', 'task', '--model', model_id, '--prompt-file', prompt_file],
-                capture_output=True,
-                text=True,
+            # Call OpenClaw Gateway HTTP API
+            response = requests.post(
+                f"{gateway_url}/v1/chat/completions",
+                json={
+                    "model": openclaw_model_id,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,  # Lower temperature for structured output
+                    "max_tokens": 4096
+                },
+                headers={"Content-Type": "application/json"},
                 timeout=120  # 2 minutes timeout
             )
 
-            if result.returncode != 0:
-                raise Exception(f"OpenClaw task failed: {result.stderr}")
+            response.raise_for_status()
+            result = response.json()
 
-            return result.stdout
+            # Extract the message content from the response
+            return result['choices'][0]['message']['content']
 
-        finally:
-            # Clean up temp file
-            if os.path.exists(prompt_file):
-                os.unlink(prompt_file)
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"OpenClaw Gateway API call failed: {e}")
+        except (KeyError, IndexError) as e:
+            raise Exception(f"Failed to parse Gateway API response: {e}")
 
     def _parse_ai_response(self, response: str) -> List[Dict]:
         """
