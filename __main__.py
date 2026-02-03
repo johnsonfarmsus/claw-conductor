@@ -52,12 +52,30 @@ def main():
             channel_name=channel_name if 'channel_name' in locals() else None
         )
 
-        # Output result
+        # Output result based on mode
         if result.get('success'):
-            print(result.get('response', 'Task completed successfully'))
+            mode = result.get('mode', 'unknown')
+
+            if mode == 'simple':
+                # Simple response mode - output the response text
+                print(result.get('response', 'Response generated'))
+            elif mode == 'development':
+                # Development mode - output project summary
+                project = result.get('project', {})
+                output = f"✅ Development task completed!\n"
+                output += f"📦 Project: {project.get('name', 'unknown')}\n"
+                output += f"📁 Workspace: {project.get('workspace', 'unknown')}\n"
+                output += f"🎯 Tasks completed: {project.get('total_tasks', 0)}\n"
+
+                if result.get('github_repo'):
+                    output += f"🔗 GitHub: {result['github_repo']}\n"
+
+                print(output)
+            else:
+                print(f"Task completed (mode: {mode})")
         else:
             error_msg = result.get('error', 'Unknown error occurred')
-            print(f"Error: {error_msg}", file=sys.stderr)
+            print(f"❌ Error: {error_msg}")
             sys.exit(1)
 
     except Exception as e:
